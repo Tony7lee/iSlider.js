@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head lang="zh-cn">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>pullDownToRefresh</title>
+    <script type="text/javascript" src="../src/iSlider.js"></script>
+    <script type="text/javascript">
+        //this is an important setting to use this component lib correctly.
+        //prevent the default behavior of touch move event
+        document.addEventListener('touchmove', function (e) {
+            e.preventDefault();
+        }, false);
+
+        //useful functions
+        var BROWSER_VENDORS = ['webkit', 'moz', 'ms', 'o'];
+        function getFalseData (num){
+            var arrTpl = [],
+                i      = 0;
+            for(; i < num; i++){
+                arrTpl.push('<li>item' + i + '</li>');
+            }
+            arrTpl.sort(function(){
+                return Math.random() > 0.5 ? -1 : 1;
+            });
+            return arrTpl.join('');
+        }
+         function parseMillisecond (ms) {
+            if(!ms) return '';
+            var date   = new Date(ms),
+                hour   = ('0' + date.getHours()).slice(-2),
+                minute = ('0' + date.getMinutes()).slice(-2),
+                second = ('0' + date.getSeconds()).slice(-2);
+            return hour + ':' + minute + ':' + second;
+        }
+        function getTime() {
+            return Date.now ? Date.now() : new Date().getTime();
+        }
+        function getStyle (ele, prop) {
+            return window.getComputedStyle(ele, null).getPropertyValue(prop);
+        }
+        function setCompatibleProperty (eleStyle, prop, value) {
+            var value = typeof value === 'string' ? value : value.join(' '),
+                    i     = 0,
+                    len   = BROWSER_VENDORS.length;
+            for( ; i < len; i++){
+                eleStyle.setProperty(['-', BROWSER_VENDORS[i], '-', prop].join(''), value);
+            }
+            eleStyle.setProperty(prop, value);
+        }
+
+        //window loaded
+        window.onload = function (){
+            var oPullDown        = document.getElementById('pull_down'),
+                oSlider          = document.getElementById('slider'),
+                oPullIcon        = document.getElementById('pull_icon'),
+                oPullInfo        = document.getElementById('pull_info'),
+                oPullTime        = document.getElementById('pull_time'),
+                refreshThreshold = Math.abs(parseInt(getStyle(oPullDown, 'top'))) * 2 - parseInt(getStyle(oPullDown, 'height')),
+                now              = getTime(),
+                loading          = false,
+                pullState        = 'idle';
+
+            //first render false data
+            oSlider.innerHTML = getFalseData(60);
+            oPullTime.innerHTML = parseMillisecond(now);
+
+            //init a iSlider component
+            var iSlider = new ISlider('#content');
+
+            //set UI: pull down to refresh
+            iSlider.goWithTouchStart = function (x, y){
+                if(loading) return;
+                if(pullState === 'idle') {
+                    pullState = '';
+                    oPullIcon.src = './img/arrow.png';
+                    oPullInfo.innerHTML = 'pull down to refresh!';
+                    setCompatibleProperty(oPullIcon.style, 'transition', 'all .3s linear .05s');
+                }
+            };
+            iSlider.goWithTouchMove = function (x, y){
+                if(loading) return;
+
+                if( y >= refreshThreshold) {
+                    if(pullState !== 'ready') {
+                        pullState = 'ready';
+                        setCompatibleProperty(oPullIcon.style, 'transform', 'rotate(180deg)');
+                        oPullInfo.innerHTML = 'release to load!';
+                    }
+                }
+                else if(y > 0) {
+                    if(pullState !== 'pulling') {
+                        pullState = 'pulling';
+                        setCompatibleProperty(oPullIcon.style, 'transform', 'rotate(0deg)');
+                        oPullInfo.innerHTML = 'pull down to refresh!';
+                    }
+                }
+            };
+            iSlider.goWithTouchEnd = function (x, y){
+                var _this = this,
+                    delay;
+
+                if(y >= refreshThreshold) {
+                    _this.stopInertia();
+                    _this.animateTo(y, refreshThreshold);
+
+                    if(loading) {
+                        return;
+                    }else{
+                        loading = true;
+                    }
+
+                    oPullIcon.src = './img/loadingcircle.gif';
+                    oPullInfo.innerHTML = 'loading...';
+                    setCompatibleProperty(oPullIcon.style, 'transition', 'none 0s linear 0s');
+                    setCompatibleProperty(oPullIcon.style, 'transform', 'rotate(0deg)');
+
+                    delay = (parseInt(Math.random() * 15) + 5) * 100;
+                    setTimeout(function () {
+                        var now = getTime();
+                        //refresh false data
+                        pullState = 'idle';
+                        loading = false;
+                        oSlider.innerHTML = getFalseData(60);
+                        oPullInfo.innerHTML = 'load successfully!';
+                        oPullTime.innerHTML = parseMillisecond(now);
+
+                        _this.resumeInertia();
+                        _this.updateRightPosition();
+                    }, delay);
+                }
+            };
+
+        };
+    </script>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: 18px;
+        }
+        @media screen and (max-width:375px) {
+            html {
+                font-size: 16px;
+            }
+        }
+
+        #nav{
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            width: 100%;
+            height: 50px;
+            background-color: #5893EF;
+        }
+
+        #pull_down{
+            position: absolute;
+            top: -3.2rem;
+            left: 0;
+            width: 100%;
+            height: 2.5rem;
+            text-align: center;
+            color: purple;
+        }
+        #pull_down > div{
+            display: inline-block;
+        }
+        #pull_down img{
+            float: left;
+            height: 2.3rem;
+        }
+        #pull_down .pull-state{
+            float: right;
+            height: 2.5rem;
+            margin-left: 1em;
+            text-align: center;
+            font: normal lighter .9rem / 1 Courier New, Roboto, Microsoft YaHei, sans-serif;
+        }
+        #pull_down div p{
+            margin-bottom: .7rem;
+        }
+        #content{
+            position: absolute;
+            top: 50px;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            background-color: #FCFBFB;
+            overflow: hidden;
+        }
+        #content .wrap{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #B7E4AF;
+            text-align: center;
+        }
+        #content #slider li{
+            width: 100%;
+            height: 50px;
+            font-size: 20px;
+            color: black;
+            line-height: 50px;
+            text-indent: 1em;
+            border-top: 3px solid #bb71c2;
+        }
+        #content #slider li:first-child{
+            border: none;
+        }
+        #footer{
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 30px;
+            background-color: #cc424e;
+        }
+    </style>
+</head>
+<body>
+<nav id="nav"></nav>
+<article id="content">
+    <div class="wrap">
+        <aside id="pull_down">
+            <div>
+                <img id="pull_icon" src="./img/arrow.png"/>
+                <div class="pull-state">
+                    <p id="pull_info">pull down to refresh!</p>
+                    <p>latest update: <span id="pull_time"></span></p>
+                </div>
+            </div>
+        </aside>
+        <ul id="slider">
+        </ul>
+    </div>
+</article>
+<footer id="footer"></footer>
+</body>
+</html>

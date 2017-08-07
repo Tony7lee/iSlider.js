@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head lang="zh-cn">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>pullDownToRefresh2</title>
+    <style type="text/css">
+        .nav{
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 2;
+            width: 100%;
+            height: 50px;
+            background-color: #5893EF;
+        }
+
+
+        .container{
+            position: absolute;
+            top: 50px;
+            bottom: 50px;
+            left: 0;
+            width: 100%;
+            background-color: #efeff4;
+            overflow: hidden;
+        }
+        .container .wrap{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            text-align: center;
+        }
+        .pull-down{
+            position: absolute;
+            top: -46px;
+            left: 0;
+            width: 100%;
+            height: 26px;
+            text-align: center;
+        }
+        .pull-down > div{
+            display: inline-block;
+            min-width: 108px;
+            height: 26px;
+        }
+        .pull-icon{
+            float: left;
+            width: 26px;
+            height: 26px;
+        }
+        .pull-icon img, .pull-icon svg{
+            width: 26px;
+            height: 26px;
+        }
+        .pull-state{
+            float: right;
+            min-width: 72px;
+            height: 26px;
+            margin-left: 10px;
+            line-height: 26px;
+            text-align: left;
+            font-size: 12px;
+            color: #999;
+        }
+
+
+
+        .container .contents > div{
+            width: 100%;
+            height: 50px;
+            font-size: 20px;
+            color: black;
+            line-height: 50px;
+            border-top: 1px solid rgba(0, 100, 0, .3);
+            list-style-type: none;
+        }
+        .container .contents div:first-child{
+            border: none;
+        }
+        .footer{
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background-color: #5893EF;
+        }
+    </style>
+    <script type="text/javascript" src="../src/iSlider.js"></script>
+</head>
+<body>
+<nav class="nav"></nav>
+<article id="container" class="container">
+    <div class="wrap">
+        <aside class="pull-down">
+            <div>
+                <div id="pull_icon" class="pull-icon"></div>
+                <div id="pull_state" class="pull-state"></div>
+            </div>
+        </aside>
+        <div id="contents" class="contents">
+        </div>
+    </div>
+</article>
+<footer class="footer"></footer>
+<script type="text/javascript">
+    //simulate the false data;
+    var oSlider = document.getElementById('contents'),
+            delay;
+    function getFalseData (num) {
+        var arrTpl = [],
+                i      = 0;
+        for(; i < num; i++){
+            arrTpl.push('<div>item' + i + '</div>');
+        }
+        arrTpl.sort(function(){
+            return Math.random() > 0.5 ? -1 : 1;
+        });
+        return arrTpl.join('');
+    }
+
+
+    (function (){
+        var oPullIcon        = document.getElementById('pull_icon'),
+                oPullInfo        = document.getElementById('pull_state'),
+                refreshThreshold = 66,
+                loading          = false,
+                pullState        = 'idle',
+                tplArrow         = '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADQAAAA0CAMAAADypuvZAAAAhFBMVEUAAACAgICXl5eZmZmYmJiYmJiTk5OYmJiXl5eVlZWYmJiYmJiZmZmVlZWYmJiYmJiZmZmYmJiYmJiZmZmYmJiYmJiYmJiZmZmZmZmZmZmUlJSXl5eZmZmYmJiZmZmYmJiYmJiJiYmWlpaWlpaWlpaPj4+Xl5eVlZWWlpaVlZWZmZmXl5cdREB0AAAAKnRSTlMAB5T6978T5DUjGe2MW0fzsS/dyaSfg3BmTysK3ryqmSUN7dRtDnthVkFenMZAAAABwUlEQVRIx5TOx3KDQBBF0TcMaYLJ0USprM3z//+fF1KVAVEIznbmdjd2zI0z9EZK0w9OM+OE1AZcCWyKY6FH0k3qSPlC+CqqE5ekFx4kaiRN2XZY6NrSkKPCPmEl3eqGN7fKpbQCO3yPctLYpSdJz8eb74zBwelhwOwbG1HMXOOAzhlHmz0xC4FDomC82uVnLPBRwcxfDPGYC3wkcnr/3ywDjRN0QIsXJWWIU0IpFZ5GTjhp4vjK6WqcpF0+j/JY4bSKHgCkNDfscH6/8O5hmAKwLHE+QkkLIGB7JWoZADPd7krUuZzRMMGVCAkbOKyvRTUdDIyuRREH9FTXIsUehj5W/G302LzTQFJg6ecerqP03mBJUP51WiY7CMMwEFUjh6UHyo6AE0npovn//0OkB5A87WE+4EmW7VkcFNCM/9AjITjIjXeF3X/Qdo2LG48sooMNE1SYs18EW3kL9BNUH7Gv/MrpcXvg9oXqXBh3XP5Gg6ELaDNiRd+IP+zOkGCIT/qwc9IYGwCnN5XGvAg3CXnFRbgg90NkzKvIXTAWxcIUs5RsWQkAKWqUUFPiUwlqpRIo5UOpOVKh0qubXhKlOvoBYm81c9kv2R0AAAAASUVORK5CYII="/>',
+                tplLoading       =
+                        '<svg width="38" height="38" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" stroke="#999">'
+                        +   '<g fill="none" fill-rule="evenodd">'
+                        +       '<g transform="translate(1 1)" stroke-width="2">'
+                        +           '<circle stroke-opacity=".5" cx="18" cy="18" r="18"/>'
+                        +           '<path d="M36 18c0-9.94-8.06-18-18-18">'
+                        +               '<animateTransform attributeName="transform" type="rotate" from="0 18 18" to="360 18 18" dur="1s" repeatCount="indefinite"/>'
+                        +           '</path>'
+                        +       '</g>'
+                        +   '</g>'
+                        +'</svg>';
+
+        function setCompatibleProperty (eleStyle, prop, value) {
+            var VENDORS = ['webkit', 'moz', 'ms', 'o'],
+                    value   = typeof value === 'string' ? value : value.join(' '),
+                    i       = 0,
+                    len     = VENDORS.length;
+            for( ; i < len; i++){
+                eleStyle.setProperty(['-', VENDORS[i], '-', prop].join(''), value);
+            }
+            eleStyle.setProperty(prop, value);
+        }
+        function releaseLoading () {
+            pullState = 'idle';
+            loading = false;
+            oPullInfo.innerHTML = '加载成功';
+            this.resumeInertia();
+            this.updateRightPosition();
+        }
+
+        //get the initial false data.
+        oSlider.innerHTML = getFalseData(60);
+
+        //instantiate a iSlider component.
+        var iSlider = new ISlider('#container');
+        oPullIcon.innerHTML = tplArrow;
+        oPullInfo.innerHTML = '下拉即可刷新';
+
+        //config iSlider object.
+        iSlider.goWithTouchStart = function (x, y){
+            if(loading) return;
+            if(pullState === 'idle') {
+                pullState = '';
+                oPullIcon.innerHTML = tplArrow;
+                oPullInfo.innerHTML = '下拉即可刷新';
+                setCompatibleProperty(oPullIcon.style, 'transition', 'all .3s linear .05s');
+            }
+        };
+        iSlider.goWithTouchMove = function (x, y){
+            if(loading) return;
+
+            if( y >= refreshThreshold) {
+                if(pullState !== 'ready') {
+                    pullState = 'ready';
+                    setCompatibleProperty(oPullIcon.style, 'transform', 'rotate(180deg)');
+                    oPullInfo.innerHTML = '释放即可刷新';
+                }
+            }
+            else if(y > 0) {
+                if(pullState !== 'pulling') {
+                    pullState = 'pulling';
+                    setCompatibleProperty(oPullIcon.style, 'transform', 'rotate(0deg)');
+                    oPullInfo.innerHTML = '下拉即可刷新';
+                }
+            }
+        };
+        iSlider.goWithTouchEnd = function (x, y){
+            var _this = this;
+
+            if(y >= refreshThreshold) {
+                _this.stopInertia();
+                _this.animateTo(y, refreshThreshold);
+
+                if(loading) {
+                    return;
+                }else{
+                    loading = true;
+                }
+
+                oPullIcon.innerHTML = tplLoading;
+                oPullInfo.innerHTML = '加载中...';
+                setCompatibleProperty(oPullIcon.style, 'transition', 'none 0s linear 0s');
+                setCompatibleProperty(oPullIcon.style, 'transform', 'rotate(0deg)');
+
+                //模拟ajax异步数据通讯
+                delay = (parseInt(Math.random() * 15) + 8) * 100;
+                //假通讯中的success
+                setTimeout(function () {
+                    releaseLoading.call(_this);
+
+                    //假数据
+                    oSlider.innerHTML = getFalseData(60);
+
+                }, delay);
+            }
+        };
+
+    })();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head lang="zh-cn">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>swipeAndSwitch</title>
+    <style type="text/css">
+        body {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            text-align: center;
+            padding: 0;
+            margin: 0;
+            font-family: 'Courier New', Roboto, 'Microsoft YaHei', sans-serif;
+        }
+        .tit, .note {
+            color: #ccc;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+        .tit {
+            margin: 1.5em 0;
+        }
+        .note {
+            margin-top: 2em;
+        }
+        .box-wrap {
+            position: relative;
+            top:0;
+            left: 0;
+            width: 100%;
+            height: 8rem;
+            margin: 0;
+            overflow: hidden;
+        }
+        .box{
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: block;
+            width: 100%;
+            height: 8rem;
+            padding: 0;
+            margin: 0;
+        }
+        .box li{
+            position: relative;
+            float: left;
+            display: block;
+            width: 100%;
+            height: 8rem;
+            background-color: #48bb68;
+            font-size: 2rem;
+            font-weight: bolder;
+            color: #fff;
+            line-height: 8rem;
+        }
+        .box li:nth-child(1) {
+            background-color: #3583bb;
+        }
+        .box li:nth-child(2) {
+            background-color: #3c2b23;
+        }
+        .nav {
+            display: inline-block;
+            padding: 0;
+            margin: 0;
+        }
+        .nav:before,
+        .nav:after {
+             content: " ";
+             display: table;
+         }
+        .nav:after {
+             clear: both;
+         }
+        .nav li {
+                float: left;
+                display: block;
+                width: .44rem;
+                height: .44rem;
+                margin-left: .45rem;
+                background-color: #ddd;
+                border-radius: 50%;
+        }
+        .nav li:first-child{
+             margin-left: 0;
+         }
+        .nav li.active:nth-child(1){
+             background-color: #359DF5;
+         }
+        .nav li.active:nth-child(2){
+            background-color: #3c2b23;
+        }
+        .nav li.active:nth-child(3){
+            background-color: #48bb68;
+        }
+
+    </style>
+    <script type="text/javascript" src="../src/iSlider.js"></script>
+</head>
+<body>
+<header class="tit">try to swipe the bar:)</header>
+<div id="box_wrap" class="box-wrap">
+    <ul id="box" class="box">
+        <li>1</li>
+        <li>2</li>
+        <li>3</li>
+    </ul>
+</div>
+<ul id="nav" class="nav">
+    <li class="active"></li>
+    <li></li>
+    <li></li>
+</ul>
+<footer class="note">this is the last demo.all the three demos can be seen in the demo folder,i also add some chinese notation in the source code.enjoy:)</footer>
+<script type="text/javascript">
+    var oBox   = document.getElementById('box'),
+        oItems = oBox.children,
+        oNav   = document.getElementById('nav');
+    /**
+     * init a iSlider component
+     */
+    var contrast = {
+            nextFrameWth: null,
+            currentFrame: 0,
+            frameNum: oItems.length,
+            /**
+             * 实例化iSlider组件
+             */
+            oSlider: null,
+            /**
+             * 更新组件应用对象尺寸
+             */
+            updateSize: function () {
+                var _this     = this,
+                    windowWth = window.outerWidth,
+                    elemNum   = oItems.length;
+                for(var i = 0; i < elemNum; i++) {
+                    oItems[i].style.width = windowWth + 'px';
+                }
+                oBox.style.width = windowWth * elemNum + 'px';
+                _this.nextFrameWth = windowWth;
+                setTimeout(function () {
+                    _this.oSlider.moveTo(-_this.currentFrame * _this.nextFrameWth, 0);
+                }, 0);
+            },
+            /**
+             * 更新导航位置
+             */
+            updateNav: function () {
+                var i = 0,
+                    oNavChild = oNav.children;
+                for( ; i < oNavChild.length; i++) {
+                    oNavChild[i].className = '';
+                }
+                oNavChild[this.currentFrame].className = 'active';
+            },
+            /**
+             * 初始化
+             */
+            init: function () {
+                var _this = this;
+                _this.oSlider = new ISlider('#box_wrap', {
+                    direction: 'x',
+                    lockTheOtherDirection: true
+                });
+                _this.updateSize();
+                _this.oSlider.goWithTouchStart = function (x, y) {
+                    _this.oSlider.resumeInertia();
+                };
+                _this.oSlider.goWithTouchEnd = function (x, y, inertia) {
+                    var refX       = -_this.currentFrame * _this.nextFrameWth,
+                        refWth     = _this.nextFrameWth / 4,
+                        destNext   = refX - refWth,
+                        destBack   = refX + refWth,
+                        maxBoundry = -_this.nextFrameWth * (_this.frameNum - 1);
+                    //向右滑动
+                    if(_this.currentFrame > 0 && (x >= destBack || (inertia && inertia >= destBack))) {
+                        _this.currentFrame--;
+                        _this.oSlider.stopInertia();
+                        _this.oSlider.animateTo(x, -_this.currentFrame * _this.nextFrameWth, 300, Math.tween.Quad.easeOut);
+                        _this.updateNav();
+                    }
+                    //向左滑动
+                    else if((_this.currentFrame < _this.frameNum - 1) && (x <= destNext || (inertia && inertia <= destNext))) {
+                        _this.currentFrame++;
+                        _this.oSlider.stopInertia();
+                        _this.oSlider.animateTo(x, -_this.currentFrame * _this.nextFrameWth, 300, Math.tween.Quad.easeOut);
+                        _this.updateNav();
+                    }
+                    //未溢出极限的普通滑动
+                    else if((x < 0 && x > maxBoundry) && (!inertia || (inertia < 0 && inertia > maxBoundry))) {
+                        _this.oSlider.stopInertia();
+                        _this.oSlider.animateTo(x, -_this.currentFrame * _this.nextFrameWth, 200, false);
+                    }
+                };
+            }
+         };
+    window.onresize = function () {
+        contrast.updateSize();
+    };
+    window.onorientationchange = function () {
+        contrast.updateSize();
+    };
+    contrast.init();
+</script>
+</body>
+</html>
